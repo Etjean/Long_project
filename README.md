@@ -1,9 +1,9 @@
 # Long_project
 Nextflow pipeline and Docker integration into SHAMAN.
 
-- [MASQUE pipeline : Metagenomic Analysis with a Quantitative pipeline](https://github.com/aghozlane/masque)  
-- [SHAMAN application : Shiny Application for Metagenomic Analysis](http://shaman.pasteur.fr/)  
-- Contact : Amine Ghozlane (amine.ghozlane@pasteur.fr)  
+- **MASQUE pipeline** : Metagenomic Analysis with a Quantitative pipeline - <https://github.com/aghozlane/masque>  
+- **SHAMAN application** : Shiny Application for Metagenomic Analysis - <http://shaman.pasteur.fr/>  
+- Contact : Amine Ghozlane - amine.ghozlane@pasteur.fr  
 
 ## Background
 Quantitative metagenomics is broadly employed to identify genera or species associated with several diseases. These data are obtained by mapping the reads of each sample against operational taxonomic units (OTU) or a gene catalog. SHAMAN was one the first web application that allowed to clinician and biologist to perform an interactive analysis of quantitative metagenomics data with a dynamic-interface dedicated to the diagnostic and to the differential analysis. The interface integrates the experimental design (association of sample to one or several conditions), the statistical process for differential analysis and a real-time visualisation system.  
