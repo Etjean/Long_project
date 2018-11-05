@@ -1,4 +1,4 @@
-# Long_project
+# Long Project
 Nextflow pipeline and Docker integration into SHAMAN.
 
 - **MASQUE pipeline** : Metagenomic Analysis with a Quantitative pipeline - <https://github.com/aghozlane/masque>  
