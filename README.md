@@ -36,6 +36,11 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
   nextflow masque.nf [OPTIONS]
   ```
 
+## Problems
+- [] --t argument is obsolete.
+- [] --c argument is currently non fonctionnal
+- [] More arguments check needs to be done.
+
 
 ## Resources
 - **MASQUE pipeline** : Metagenomic Analysis with a Quantitative pipeline - <https://github.com/aghozlane/masque>  
