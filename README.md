@@ -16,19 +16,19 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
   Download databases [here](http://dl.pasteur.fr/fop/vJlf2Krl/database.zip) and unzip them.
 
 - **Run the pipeline**  
-  Run the script directly :
+  To perform a test run of the script directly :
   ```
   docker run --rm \
-  	-v /path/to/databases:/databases \
-  	-v /path/to/data:/mydata \
+  	-v databases:/databases \
+  	-v test/data:/mydata \
   	etjean/shaman_nextflow \
   	nextflow masque.nf --i /mydata --o /mydata/result [OPTIONS]
   ```
   Or open an interactive container first, and then run the script :
   ```
   docker run -ti \
-  	-v /path/to/databases:/databases \
-  	-v /path/to/data:/mydata \
+  	-v databases:/databases \
+  	-v test/data:/mydata \
   	etjean/shaman_nextflow
   
   nextflow masque.nf --i /mydata --o /mydata/result [OPTIONS]
