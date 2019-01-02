@@ -99,6 +99,7 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
 - [ ] `--t` argument is obsolete.
 - [ ] `--c` argument is currently non fonctionnal.
 - [ ] More arguments control is needed.
+- [ ] `--o` does not create the output directory if it does not exists.
 
 
 ## Resources
