@@ -17,7 +17,7 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
   bash install_databases.sh
   ```
 
-- **Run the pipeline**
+- **Run the pipeline**  
   Run the script directly :
   ```
   docker run --rm \
@@ -26,7 +26,7 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
   	etjean/shaman_nextflow \
   	nextflow masque.nf [OPTIONS]
   ```
-  Or open an interactive container first and then run the script :
+  Or open an interactive container first, and then run the script :
   ```
   docker run -ti \
   	-v /path/to/databases:/databases \
