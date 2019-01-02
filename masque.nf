@@ -138,7 +138,11 @@ if (params.i!="" && params.a!="") {println tored('Please indicate an input direc
 if (params.o=="") {println tored('Please indicate the output directory.'); exit 1}
 // Check and create output directories
 outdir = file(params.o)
-if( !outdir.exists() ) {println tored('The specified output directory does not exist.'); exit 1}
+if( !outdir.exists() ) {
+	if( !outdir.mkdirs() ) 	{
+        exit 1, "Cannot create working directory: $outDir"
+    } 
+}
 readsdir = file(readsDir)
 if( !readsdir.exists() ) {
     if( !readsdir.mkdirs() ) 	{
@@ -323,6 +327,7 @@ reads_raw = Channel.fromPath("$params.i/*.{fq,fastq}")
 
 
 // Decompress
+// Only executed if input files have the '.gz' extension.
 process Decompress {
 	tag "$sample"
 	
@@ -333,7 +338,6 @@ process Decompress {
 		file "${sample}.fastq" into reads_dc
 	
 	script:
-		// sample = (reads_raw_compressed.name =~ /(.+)(\.fq|\.fastq)/)[0][1]
 		sample = reads_raw_compressed.simpleName
 		"""
 		gzip --decompress --stdout $reads_raw_compressed > ${sample}.fastq
@@ -358,7 +362,6 @@ process Trimming {
 		
 	
 	script:
-		// sample = (reads_raw.name =~ /(.+)\.fastq/)[0][1]
 		sample = reads_raw.simpleName
 		"""
 		$alientrimmer \
@@ -376,32 +379,32 @@ process Trimming {
 
 contminants_species = Channel.from(params.c.collect( {filterRef[it]} ))
 
-// Filetring reads against contaminant database
-process Comtaminant {
+// // Filetring reads against contaminant database
+// process Comtaminant {
 	
-	input:
-		file reads_alien
-		val contminants_species
+// 	input:
+// 		file reads_alien
+// 		val contminants_species
 	
-	output:
-		file '*.fastq'
+// 	output:
+// 		file '*.fastq'
 
-	script:
-		sample = (reads_alien.name =~ /(.+)_alien\.fastq/)[0][1]
-		cont = 
-		"""
-		$bowtie2  -q \
-		-N $params.nbMismatchMapping \
-		-p $params.t \
-		-x $contaminant_species \
-		-U $reads_alien \
-		-S /dev/null \
-		--un ${sample}_filtered_${cont}.fastq \
-		-t --end-to-end --very-fast  \
-		> ${logDir}/log_mapping_${SampleName}_${contaminant[${essai}]}_${essai}.txt \
-		2>&1
-		"""
-}
+// 	script:
+// 		sample = (reads_alien.name =~ /(.+)_alien\.fastq/)[0][1]
+// 		cont = 
+// 		"""
+// 		$bowtie2  -q \
+// 		-N $params.nbMismatchMapping \
+// 		-p $params.t \
+// 		-x $contaminant_species \
+// 		-U $reads_alien \
+// 		-S /dev/null \
+// 		--un ${sample}_filtered_${cont}.fastq \
+// 		-t --end-to-end --very-fast  \
+// 		> ${logDir}/log_mapping_${SampleName}_${contaminant[${essai}]}_${essai}.txt \
+// 		2>&1
+// 		"""
+// }
 
 
 
