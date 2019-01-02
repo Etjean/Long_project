@@ -13,7 +13,7 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
 
 ## Usage
 - **Download databases**  
-  Download databases [here](http://dl.pasteur.fr/fop/vJlf2Krl/database.zip)
+  Download databases [here](http://dl.pasteur.fr/fop/vJlf2Krl/database.zip) and unzip them.
 
 - **Run the pipeline**  
   Run the script directly :
