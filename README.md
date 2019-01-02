@@ -37,9 +37,9 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
   ```
 
 ## Problems
-- [ ] --t argument is obsolete.
-- [ ] --c argument is currently non fonctionnal
-- [ ] More arguments check needs to be done.
+- [ ] `--t` argument is obsolete.
+- [ ] `--c` argument is currently non fonctionnal.
+- [ ] More arguments control is needed.
 
 
 ## Resources
