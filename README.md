@@ -19,7 +19,7 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
   To perform a test run of the script directly :
   ```
   docker run --rm \
-    -v /path/to/masque.nf:masque.nf \
+    -v /path/to/masque.nf:/masque.nf \
   	-v /path/to/databases:/databases \
   	-v /path/to/test/data:/mydata \
   	etjean/shaman_nextflow \
@@ -28,7 +28,7 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
   Or open an interactive container first, and then run the script :
   ```
   docker run -ti \
-    -v /path/to/masque.nf:masque.nf \
+    -v /path/to/masque.nf:/masque.nf \
   	-v /path/to/databases:/databases \
   	-v /path/to/test/data:/mydata \
   	etjean/shaman_nextflow
