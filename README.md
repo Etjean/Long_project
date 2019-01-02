@@ -19,6 +19,7 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
   To perform a test run of the script directly :
   ```
   docker run --rm \
+    -v /path/to/masque.nf:masque.nf \
   	-v /path/to/databases:/databases \
   	-v /path/to/test/data:/mydata \
   	etjean/shaman_nextflow \
@@ -99,7 +100,7 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
 - [ ] `--t` argument is obsolete.
 - [ ] `--c` argument is currently non fonctionnal.
 - [ ] More arguments control is needed.
-- [ ] `--o` does not create the output directory if it does not exists.
+- [x] ~~`--o` does not create the output directory if it does not exists.~~
 
 
 ## Resources
