@@ -1,5 +1,6 @@
 databases/
 test/data/result/
+test/data/
 
 data/mock/1ng-25cycles-1_S38_L001_R1_001.fastq.gz
 data/mock/1ng-25cycles-1_S38_L001_R2_001.fastq.gz
