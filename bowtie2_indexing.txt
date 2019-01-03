@@ -1,5 +1,0 @@
-NC_001422.fna
-anopheles_stephensi.fna
-danio_rerio.fna
-mus_musculus.fna
-homo_sapiens.fna
