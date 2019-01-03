@@ -1,12 +1,12 @@
 databases/
 test/data/result/
 
-# data/mock/1ng-25cycles-1_S38_L001_R1_001.fastq.gz
-# data/mock/1ng-25cycles-1_S38_L001_R2_001.fastq.gz
+data/mock/1ng-25cycles-1_S38_L001_R1_001.fastq.gz
+data/mock/1ng-25cycles-1_S38_L001_R2_001.fastq.gz
 data/mock/1ng-25cycles-2_S39_L001_R1_001.fastq.gz
 data/mock/1ng-25cycles-2_S39_L001_R2_001.fastq.gz
-# data/mock/1ng-25cycles-3_S40_L001_R1_001.fastq.gz
-# data/mock/1ng-25cycles-3_S40_L001_R2_001.fastq.gz
+data/mock/1ng-25cycles-3_S40_L001_R1_001.fastq.gz
+data/mock/1ng-25cycles-3_S40_L001_R2_001.fastq.gz
 data/mock/1ng-30cycles-1_S50_L001_R1_001.fastq.gz
 data/mock/1ng-30cycles-1_S50_L001_R2_001.fastq.gz
 data/mock/1ng-30cycles-2_S51_L001_R1_001.fastq.gz
