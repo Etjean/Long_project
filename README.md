@@ -20,20 +20,20 @@ We want to integrate a full automatized bioinformatic workflow based on Nextflow
   ```
   docker run --rm \
     -v /path/to/masque.nf:/masque.nf \
-    -v /path/to/databases:/databases \
-    -v /path/to/test/data:/mydata \
+    -v /path/to/databases:/db \
+    -v /path/to/data:/data \
     etjean/shaman_nextflow \
-    nextflow masque.nf --i /mydata --o /mydata/result
+    nextflow masque.nf --i /data --o /data/result
   ```
   Or open an interactive container first, and then run the script :
   ```
   docker run -ti \
     -v /path/to/masque.nf:/masque.nf \
-    -v /path/to/databases:/databases \
-    -v /path/to/test/data:/mydata \
+    -v /path/to/databases:/db \
+    -v /path/to/data:/data \
     etjean/shaman_nextflow
     
-  nextflow masque.nf --i /mydata --o /mydata/result
+  nextflow masque.nf --i /data --o /data/result
   ```
   
 - **Arguments**
