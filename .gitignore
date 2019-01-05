@@ -32,12 +32,22 @@ data/mycobiote_16S/IHMS3-16S.fastq.gz
 data/mycobiote_16S/IHMS4-16S.fastq.gz
 data/mycobiote_16S/IHMS5-16S.fastq.gz
 data/mycobiote_16S/IHMS6-16S.fastq.gz
+data/IHMS2-16S.fastq.gz
+data/IHMS3-16S.fastq.gz
+data/IHMS4-16S.fastq.gz
+data/IHMS5-16S.fastq.gz
+data/IHMS6-16S.fastq.gz
 # data/mycobiote_16S/MOBIO1-16S.fastq.gz
 data/mycobiote_16S/MOBIO2-16S.fastq.gz
 data/mycobiote_16S/MOBIO3-16S.fastq.gz
 data/mycobiote_16S/MOBIO4-16S.fastq.gz
 data/mycobiote_16S/MOBIO5-16S.fastq.gz
 data/mycobiote_16S/MOBIO6-16S.fastq.gz
+data/MOBIO2-16S.fastq.gz
+data/MOBIO3-16S.fastq.gz
+data/MOBIO4-16S.fastq.gz
+data/MOBIO5-16S.fastq.gz
+data/MOBIO6-16S.fastq.gz
 
 # data/mycobiote_ITS/IHMS1-ITS1.fastq.gz
 data/mycobiote_ITS/IHMS2-ITS1.fastq.gz

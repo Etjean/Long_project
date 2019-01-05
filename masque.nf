@@ -55,10 +55,10 @@ if (params.size()==1 || params.help) {
 	println("                          (default: vsearch)")
 	println("--b                       Perform taxonomical annotation with blast")
 	println("                          (default: vsearch)")
-	println("--l                       Perform taxonomical annotation")
-	println("                          against LSU databases: Silva/RDP")
-	println("--f                       Perform taxonomical annotation")
-	println("                          against ITS databases: Unite/Findley/Underhill/RDP")
+	println("--l                       Perform taxonomical annotation against LSU")
+	println("                          databases: Silva/RDP")
+	println("--f                       Perform taxonomical annotation against ITS")
+	println("                          databases: Unite/Findley/Underhill/RDP")
 	println("--minreadlength           Minimum read length take in accound in the study")
 	println("                          (default: 35nt)")
 	println("--minphred                Qvalue must lie between [0-40]")
@@ -162,8 +162,8 @@ if( !errorlogdir.exists() ) {
     } 
 }
 // Definition of params.n
-if (params.i =~ /\/*([a-zA-Z-_\s]+)\/*$/) {params.n=(params.i =~ /\/*([a-zA-Z-_\s]+)\/*$/)[0][1]}
-else if (params.a =~ /\/*([a-zA-Z-._]+\.[a-zA-Z~]+)$/) {params.n=(params.a =~ /\/*([a-zA-Z-._]+)\.[a-zA-Z~]+$/)[0][1]}
+if (params.i =~ /\/*([^\/]+)\/*$/) {params.n=(params.i =~ /\/*([^\/]+)\/*$/)[0][1]}
+else if (params.a =~ /\/*([^\/]+)\/*$/) {params.n=(params.a =~ /\/*([^\/]+)\/*$/)[0][1]}
 else {params.n='masque_run'}
 
 
@@ -173,7 +173,7 @@ else {params.n='masque_run'}
 
 // DATABASES
 // Databases directory
-db = '/databases'
+db = '/db'
 // ChimeraSlayer reference database
 // http://drive5.com/uchime/uchime_download.html
 gold="$db/gold.fa"
@@ -318,7 +318,6 @@ else {
 // MAIN
 say 'Start analysis'
 
-say 'Start working on reads'
 
 // Input channel
 reads_raw_compressed = Channel.fromPath("$params.i/*.{fq.gz,fastq.gz}")
@@ -328,6 +327,8 @@ reads_raw = Channel.fromPath("$params.i/*.{fq,fastq}")
 
 // Decompress
 // Only executed if input files have the '.gz' extension.
+say 'Decompressing reads files'
+
 process Decompress {
 	tag "$sample"
 	
@@ -336,6 +337,7 @@ process Decompress {
 		
 	output:
 		file "${sample}.fastq" into reads_dc
+		
 	
 	script:
 		sample = reads_raw_compressed.simpleName
@@ -347,10 +349,13 @@ process Decompress {
 
 
 // Trimming
+say 'Trimming reads with AlienTrimmer'
+
 process Trimming {
 	tag "$sample"
-	publishDir logDir, mode: 'move', pattern: 'log_alientrimmer_*'
-	publishDir errorlogDir, mode: 'move', pattern: 'error_log_alientrimmer_*'
+	publishDir logDir, mode: 'copy', pattern: 'log_alientrimmer_*'
+	publishDir errorlogDir, mode: 'copy', pattern: 'error_log_alientrimmer_*'
+	publishDir readsDir, mode:'copy', pattern: '*_alien.fastq'
 	
 	input:
 		file reads_raw from reads_raw.mix(reads_dc)
@@ -363,32 +368,43 @@ process Trimming {
 	
 	script:
 		sample = reads_raw.simpleName
-		"""
-		$alientrimmer \
-		-i $reads_raw \
-		-o ${sample}_alien.fastq \
-		-c $alienseq \
-		-l $params.minreadlength \
-		-p $params.minphredperc \
-		-q $params.minphred \
-		> log_alientrimmer_${sample}.txt \
-		2> error_log_alientrimmer_${sample}.txt
-		"""
+			"""
+			$alientrimmer \
+			-i $reads_raw \
+			-o ${sample}_alien.fastq \
+			-c $alienseq \
+			-l $params.minreadlength \
+			-p $params.minphredperc \
+			-q $params.minphred \
+			> log_alientrimmer_${sample}.txt \
+			2> error_log_alientrimmer_${sample}.txt
+			"""
+		// else paired
+		// 	"""
+		// 	$alientrimmer \
+		// 	-if $reads_raw[1][0] \
+		// 	-ir $reads_raw[1][1] \
+		// 	-of ${readsDir}/${sample}_alien_f.fastq \
+		// 	-or ${readsDir}/${sample}_alien_r.fastq \
+		// 	-os ${readsDir}/${sample}_alien_s.fastq \
+		// 	-c $alienseq \
+		// 	-l $params.minreadlength \
+		// 	-p $params.minphredperc \
+		// 	-q $params.minphred \
+		// 	> ${logDir}/log_alientrimmer_${sample}.txt  \
+		// 	2> ${errorlogDir}/error_log_alientrimmer_${sample}.txt
+		// 	"""
 }
 
 
-contminants_species = Channel.from(params.c.collect( {filterRef[it]} ))
-
 // // Filetring reads against contaminant database
+// contminants_species = Channel.from(params.c.collect( {filterRef[it]} ))
 // process Comtaminant {
-	
 // 	input:
 // 		file reads_alien
 // 		val contminants_species
-	
 // 	output:
 // 		file '*.fastq'
-
 // 	script:
 // 		sample = (reads_alien.name =~ /(.+)_alien\.fastq/)[0][1]
 // 		cont = 
@@ -407,6 +423,644 @@ contminants_species = Channel.from(params.c.collect( {filterRef[it]} ))
 // }
 
 
+
+
+
+// Convert to fasta
+say 'Convert files from fastq to fasta'
+
+process Fastq2Fasta {
+	tag "$sample"
+	publishDir readsDir, mode:'copy', pattern:'*.fasta'
+	publishDir errorlogDir, mode:'copy', pattern:'error_log_fastq2fasta_*'
+	
+	input:
+	file reads_alien
+	
+	output:
+	file "${sample}.fasta" into reads_fasta
+	file "error_log_fastq2fasta_${sample}.txt"
+	
+	script:
+	sample = (reads_alien.name =~ /(.+)_alien\.fastq/)[0][1]
+	"""
+	$fastq2fasta \
+	-i $reads_alien \
+	-o ${sample}.fasta \
+	-s ${sample}  \
+	2> error_log_fastq2fasta_${sample}.txt
+	"""
+}
+
+
+
+// Concatenate files
+say 'Combine all fasta files'
+
+reads_fasta
+	.collectFile(name: params.n+'_trimmed.fasta', storeDir: readsDir)
+	.into {reads_fasta1; reads_fasta2}
+
+
+
+// Dereplication
+if (params.prefixdrep) say 'Dereplication using prefixes'
+else say 'Dereplication using full reads lentgh'
+
+process Dereplication {
+	tag "$params.n"
+	publishDir readsDir, mode:'copy', pattern:'*_drep.fasta'
+		
+	input:
+	file reads_fasta1
+	
+	output:
+	file "*_drep.fasta" into reads_drep
+	// file "log_vsearch_dereplication_*"
+	
+	script:
+	if (params.prefixdrep)
+		"""
+		$vsearch \
+		--derep_prefix $reads_fasta1 \
+		-output ${params.n}_drep.fasta \
+		-sizeout \
+		-minseqlength $params.minampliconlength \
+		"""
+	else
+		"""
+		$vsearch \
+		--derep_fulllength $reads_fasta1 \
+		-output ${params.n}_drep.fasta \
+		-sizeout \
+		-minseqlength $params.minampliconlength \
+		--strand both
+		"""
+}
+
+
+
+// Singleton removal
+say 'Abundance sorting and Singleton removal'
+
+process SingletonRemoval {
+	tag "$params.n"
+	publishDir readsDir, mode:'copy', pattern:'*_sorted.fasta'
+	publishDir logDir, mode:'copy', pattern:'log_search_sort_*'
+	
+	input:
+	file reads_drep
+	
+	output:
+	file "*_sorted.fasta" into reads_nosing
+	
+	script:
+	"""
+	$vsearch \
+	-sortbysize $reads_drep \
+	-output ${params.n}_sorted.fasta \
+	-minsize $params.minotusize \
+ 	> log_search_sort_${params.n}.txt \
+ 	2>&1
+ 	"""
+}
+
+
+
+// Chimeras filtering
+if (params.chimeraslayerfiltering) say 'Chimeric reads filtering with ChimeraSlayer database'
+else say 'Chimeric reads de novo filtering'
+
+process ChimerasRemoval {
+	tag "$params.n"
+	publishDir readsDir, mode:'copy', pattern:'*_nochim.fasta'
+	publishDir readsDir, mode:'copy', pattern:'*_chim.fasta'
+	
+	input:
+	file reads_nosing
+	
+	output:
+	file '*_nochim.fasta' into reads_nochim
+	file '*_chim.fasta'
+	
+	script:
+	if (params.chimeraslayerfiltering)
+		"""
+		$vsearch \
+		--uchime_ref $reads_nosing \
+		--db $gold \
+		--strand both \
+		--nonchimeras ${params.n}_nochim.fasta \
+		--chimeras ${params.n}_chim.fasta
+		"""
+	else
+		"""
+		$vsearch \
+		--uchime_denovo $reads_nosing \
+		--strand both \
+		--nonchimeras ${params.n}_nochim.fasta \
+		--chimeras ${params.n}_chim.fasta
+		"""
+}
+
+
+
+// Clustering
+if (params.s) say 'Clustering reads using Swarm'
+else say 'Clustering reads using Vsearch'
+
+
+process Clustering {
+	tag "$params.n"
+	publishDir readsDir, mode:'copy', pattern:'*_otu.fasta'
+	
+	input:
+	file reads_nochim
+	
+	output:
+	file '*_otu.fasta' into otu
+	
+	script:
+	if (params.s)
+		"""
+		$swarm \
+		-t $params.t \
+		-f \
+		-z \
+		-w ${params.n}_otu_tmp.fasta \
+		-o ${params.n}_swarm_clustering.txt \
+		-s ${params.n}_swarm_stats.txt \
+		-u ${params.n}_swarm_uclust.txt \
+		$reads_nochim
+		
+		python $swarm2vsearch \
+		-i ${params.n}_otu_tmp.fasta \
+		-c ${params.n}_swarm_clustering.txt \
+		-o ${params.n}_otu.fasta \
+		-oc ${params.n}_otu_swarm_clustering.txt \
+		-u ${params.n}_swarm_uclust.txt \
+		-ou ${params.n}_otu_swarm_uclust.txt
+		"""
+	else
+		"""
+		$vsearch \
+		--cluster_size $reads_nochim \
+		--id 0.97 \
+		--centroids ${params.n}_otu.fasta \
+		--sizein \
+		--strand both
+		"""
+}
+otu.into {otu1; otu2; otu3; otu4; otu5}
+
+
+
+// Mapping back reads to OTUs
+say 'Mapping back reads to OTUs'
+
+process Mapping {
+	tag "$params.n"
+	publishDir readsDir, mode:'copy'
+	
+	input:
+	file otu1
+	file reads_fasta2
+	
+	output:
+	file "${params.n}_otu_table.tsv"
+	file "${params.n}_count.biom" into count
+	
+	script:
+	"""
+	$vsearch \
+	-usearch_global $reads_fasta2\
+	-db $otu1 \
+	--strand both \
+	--id 0.97 \
+	--otutabout ${params.n}_otu_table.tsv \
+	--biomout ${params.n}_count.biom
+	"""
+}
+count.into {count1; count2; count3}
+
+
+
+// Taxonomy Annotation
+if (params.b) say 'Taxonomy annotation using Blast'
+else say 'Taxonomy annotation using Vsearch'
+if (!params.l && !params.f) say 'Databases : RDP, Greengenes, Silva'
+else if (params.l && !params.f) say 'Databases : RDP, Silva'
+else if (params.f) say 'Databases : RDP, Findley, Unite, Underhill'
+
+process TaxonomyAnnotationRDP {
+	tag "$params.n"
+	publishDir readsDir, mode:'copy'
+	
+	input:
+	file otu2
+	
+	output:
+	file "${params.n}*"
+	
+	script:
+	// RDP
+	"""
+	$rdp_classifier classify \
+	-q $otu2 \
+	-o ${params.n}_vs_rdp.tsv
+	"""
+}
+
+process TaxonomyAnnotationGreengenes {
+	tag "$params.n"
+	publishDir readsDir, mode:'copy'
+	memory '2 GB'
+	
+	input:
+	file otu3
+	file count1
+	
+	output:
+	file "${params.n}*"
+	
+	when:
+	!params.l && !params.f
+	
+	script:
+	// Grenngenes for SSU with Vsearch
+	if (!params.b) {
+		"""
+	    $vsearch \
+	    --usearch_global $otu3 \
+	    --db $greengenes \
+	    --id $params.identityThreshold \
+	    --blast6out ${params.n}_vs_greengenes_id_${params.identityThreshold}.tsv \
+	    --strand both
+	    
+        python $get_taxonomy \
+        -i ${params.n}_vs_greengenes_id_${params.identityThreshold}.tsv \
+        -d $greengenes \
+        -o ${params.n}_vs_greengenes_annotation_id_${params.identityThreshold}.tsv \
+        -dtype greengenes \
+        -t $greengenes_taxonomy \
+        -ob ${params.n}_vs_greengenes_annotation_id_${params.identityThreshold}.biomtsv \
+        -u $otu3
+        
+        $biom add-metadata \
+        -i $count1 \
+        -o ${params.n}_greengenes_id_${params.identityThreshold}.biom \
+        --observation-metadata-fp ${params.n}_vs_greengenes_annotation_id_${params.identityThreshold}.biomtsv \
+        --observation-header id,taxonomy \
+        --sc-separated taxonomy \
+        --output-as-json
+		"""
+	}
+	
+	// Greengenes for SSU with Blast
+	else if (params.b) {
+		"""
+        $blastn \
+        -query $otu3 \
+        -db $greengenes \
+        -evalue $params.evalueTaxAnnot \
+        -num_threads $params.t \
+        -out ${params.n}_vs_greengenes_eval_${params.evalueTaxAnnot}.tsv \
+        -max_target_seqs $params.maxTargetSeqs \
+        -task megablast \
+        -outfmt "6 qseqid sseqid  pident qcovs evalue" \
+        -use_index true
+        
+        python $get_taxonomy \
+        -i ${params.n}_vs_greengenes_eval_${params.evalueTaxAnnot}.tsv \
+        -d $greengenes \
+        -u $otu3 \
+        -o ${params.n}_vs_greengenes_annotation_eval_${params.evalueTaxAnnot}.tsv \
+        -dtype greengenes \
+        -t $greengenes_taxonomy \
+        -ob ${params.n}_vs_greengenes_annotation_eval_${params.evalueTaxAnnot}.biomtsv
+        
+        $biom add-metadata \
+        -i $count1 \
+        -o ${params.n}_greengenes_eval_${params.evalueTaxAnnot}.biom \
+        --observation-metadata-fp ${params.n}_vs_greengenes_annotation_eval_${params.evalueTaxAnnot}.biomtsv \
+        --observation-header id,taxonomy \
+        --sc-separated taxonomy \
+        --output-as-json
+		"""
+	}
+}
+
+process TaxonomyAnnotationSilva {
+	tag "$params.n"
+	publishDir readsDir, mode:'copy'
+	memory '2 GB'
+	
+	input:
+	file otu4
+	file count2
+	
+	output:
+	file "${params.n}*"
+	
+	when:
+	!params.f
+	
+	script:
+	// Silva with Vsearch
+	if (!params.b) {
+		// SSU
+		if (!params.l) {
+			"""
+	        $vsearch \
+	        --usearch_global $otu4 \
+	        --db $silva \
+	        --id $params.identityThreshold \
+	        --blast6out ${params.n}_vs_silva_id_${params.identityThreshold}.tsv \
+	        --strand both
+	        
+	        python $get_taxonomy \
+	        -i ${params.n}_vs_silva_id_${params.identityThreshold}.tsv \
+	        -u $otu4 \
+	        -d $silva \
+	        -o ${params.n}_vs_silva_annotation_id_${params.identityThreshold}.tsv \
+	        -ob ${params.n}_vs_silva_annotation_id_${params.identityThreshold}.biomtsv
+	        
+		    $biom add-metadata \
+		    -i $count2 \
+		    -o ${params.n}_silva_id_${params.identityThreshold}.biom \
+		    --observation-metadata-fp ${params.n}_vs_silva_annotation_id_${params.identityThreshold}.biomtsv \
+		    --observation-header id,taxonomy \
+		    --sc-separated taxonomy \
+		    --output-as-json
+			"""
+		}
+		// LSU
+		else if (params.l) {
+			"""
+			$vsearch \
+			--usearch_global $otu4 \
+			--db $silvalsu \
+			--id $params.identityThreshold \
+			--blast6out ${params.n}_vs_silva_id_${params.identityThreshold}.tsv \
+			--strand both
+			
+	        python $get_taxonomy \
+	        -i ${params.n}_vs_silva_id_${params.identityThreshold}.tsv \
+	        -u $otu4 \
+	        -d $silvalsu \
+	        -o ${params.n}_vs_silva_annotation_id_${params.identityThreshold}.tsv \
+	        -ob ${params.n}_vs_silva_annotation_id_${params.identityThreshold}.biomtsv
+	        
+	        $biom add-metadata \
+		    -i $count2 \
+		    -o ${params.n}_silva_id_${params.identityThreshold}.biom \
+		    --observation-metadata-fp ${params.n}_vs_silva_annotation_id_${params.identityThreshold}.biomtsv \
+		    --observation-header id,taxonomy \
+		    --sc-separated taxonomy \
+		    --output-as-json
+			"""
+		}
+	}
+	
+	// Silva with Blast
+	else if (params.b) {
+		// SSU
+		if (!params.l) {
+			"""
+	        $blastn \
+	        -query $otu4 \
+	        -db $silva \
+	        -evalue $params.evalueTaxAnnot \
+	        -num_threads $params.t \
+	        -out ${params.n}_vs_silva_eval_${params.evalueTaxAnnot}.tsv \
+	        -max_target_seqs $params.maxTargetSeqs \
+	        -task megablast \
+	        -outfmt "6 qseqid sseqid  pident qcovs evalue" \
+	        -use_index true 
+	        
+	        python $get_taxonomy \
+	        -i ${params.n}_vs_silva_eval_${params.evalueTaxAnnot}.tsv \
+	        -d $silva \
+	        -u $otu4 \
+	        -o ${params.n}_vs_silva_annotation_eval_${params.evalueTaxAnnot}.tsv \
+	        -ob ${params.n}_vs_silva_annotation_eval_${params.evalueTaxAnnot}.biomtsv
+	        
+		    $biom add-metadata \
+		    -i $count2 \
+		    -o ${params.n}_silva_eval_${params.evalueTaxAnnot}.biom \
+		    --observation-metadata-fp ${params.n}_vs_silva_annotation_eval_${params.evalueTaxAnnot}.biomtsv \
+		    --observation-header id,taxonomy \
+		    --sc-separated taxonomy \
+		    --output-as-json
+			"""
+		}
+		// LSU
+		else if (params.l) {
+			"""
+	        $blastn \
+	        -query $otu4 \
+	        -db $silvalsu \
+	        -evalue $params.evalueTaxAnnot \
+	        -num_threads $params.t \
+	        -out ${params.n}_vs_silva_eval_${params.evalueTaxAnnot}.tsv \
+	        -max_target_seqs $params.maxTargetSeqs \
+	        -task megablast \
+	        -outfmt "6 qseqid sseqid  pident qcovs evalue" \
+	        -use_index true 
+	        
+	        python $get_taxonomy \
+	        -i ${params.n}_vs_silva_eval_${params.evalueTaxAnnot}.tsv \
+	        -d $silvalsu \
+	        -u $otu4 \
+	        -o ${params.n}_vs_silva_annotation_eval_${params.evalueTaxAnnot}.tsv \
+	        -ob ${params.n}_vs_silva_annotation_eval_${params.evalueTaxAnnot}.biomtsv
+	        
+	        $biom add-metadata \
+		    -i $count2 \
+		    -o ${params.n}_silva_eval_${params.evalueTaxAnnot}.biom \
+		    --observation-metadata-fp ${params.n}_vs_silva_annotation_eval_${params.evalueTaxAnnot}.biomtsv \
+		    --observation-header id,taxonomy \
+		    --sc-separated taxonomy \
+		    --output-as-json
+			"""	
+		}
+	}
+}
+
+process TaxonomyAnnotationITS {
+	tag "$params.n"
+	publishDir readsDir, mode:'copy'
+	
+	input:
+	file otu5
+	file count3
+	
+	output:
+	file "${params.n}*"
+	
+	when:
+	params.f
+	
+	script:
+	// Findley/Unite/Underhill with Vsearch
+	if (!params.b) {
+		"""
+        $vsearch --usearch_global $otu5 \
+        --db $findley \
+        --id $params.identityThreshold \
+        --blast6out ${params.n}_vs_findley_id_${params.identityThreshold}.tsv \
+        --strand both
+        
+        python $get_taxonomy \
+        -i ${params.n}_vs_findley_id_${params.identityThreshold}.tsv \
+        -d $findley  \
+        -u $otu5 \
+        -o ${params.n}_vs_findley_annotation_id_${params.identityThreshold}.tsv \
+        -ob ${params.n}_vs_findley_annotation_id_${params.identityThreshold}.biomtsv  \
+        -dtype findley 
+        
+        $biom add-metadata \
+        -i $count3 \
+        -o ${params.n}_findley_id_${params.identityThreshold}.biom \
+        --observation-metadata-fp ${params.n}_vs_findley_annotation_id_${params.identityThreshold}.biomtsv \
+        --observation-header id,taxonomy \
+        --sc-separated taxonomy \
+        --output-as-json 
+
+        $vsearch --usearch_global $otu5 \
+        --db $unite \
+        --id $params.identityThreshold \
+        --blast6out ${params.n}_vs_unite_id_${params.identityThreshold}.tsv \
+        --strand both
+        
+        python $get_taxonomy \
+        -i ${params.n}_vs_unite_id_${params.identityThreshold}.tsv \
+        -d $unite \
+        -u  $otu5  \
+        -o ${params.n}_vs_unite_annotation_id_${params.identityThreshold}.tsv \
+        -ob ${params.n}_vs_unite_annotation_id_${params.identityThreshold}.biomtsv \
+        -dtype unite
+        
+        $biom add-metadata \
+        -i $count3 \
+        -o ${params.n}_unite_id_${params.identityThreshold}.biom \
+        --observation-metadata-fp ${params.n}_vs_unite_annotation_id_${params.identityThreshold}.biomtsv \
+        --observation-header id,taxonomy \
+        --sc-separated taxonomy \
+        --output-as-json
+
+        $vsearch --usearch_global $otu5 \
+        --db $underhill \
+        --id $params.identityThreshold \
+        --blast6out ${params.n}_vs_underhill_id_${params.identityThreshold}.tsv \
+        --strand both
+        
+        python $get_taxonomy \
+        -i ${params.n}_vs_underhill_id_${params.identityThreshold}.tsv \
+        -d $underhill \
+        -u  $otu5 \
+        -t $underhill_taxonomy \
+        -o ${params.n}_vs_underhill_annotation_id_${params.identityThreshold}.tsv \
+        -ob ${params.n}_vs_underhill_annotation_id_${params.identityThreshold}.biomtsv \
+        -dtype underhill
+        
+        $biom add-metadata \
+        -i $count3 \
+        -o ${params.n}_underhill_id_${params.identityThreshold}.biom \
+        --observation-metadata-fp ${params.n}_vs_underhill_annotation_id_${params.identityThreshold}.biomtsv \
+        --observation-header id,taxonomy \
+        --sc-separated taxonomy \
+        --output-as-json
+		"""
+	}
+	
+	// Findley/Unite/Underhill with Blast
+	else if (params.b) {
+		"""
+        $blastn \
+        -query $otu5 \
+        -db $findley \
+        -evalue $params.evalueTaxAnnot \
+        -num_threads $params.t \
+        -out ${params.n}_vs_findley_eval_${params.evalueTaxAnnot}.tsv \
+        -max_target_seqs $params.maxTargetSeqs \
+        -task megablast \
+        -outfmt "6 qseqid sseqid  pident qcovs evalue" \
+        -use_index true
+        
+        python $get_taxonomy \
+        -i ${params.n}_vs_findley_eval_${params.evalueTaxAnnot}.tsv \
+        -d $findley \
+        -u  $otu5  \
+        -o ${params.n}_vs_findley_annotation_eval_${params.evalueTaxAnnot}.tsv \
+        -ob ${params.n}_vs_findley_annotation_eval_${params.evalueTaxAnnot}.biomtsv \
+        -dtype findley
+        
+        $biom add-metadata \
+        -i $count3 \
+        -o ${params.n}_findley_eval_${params.evalueTaxAnnot}.biom \
+        --observation-metadata-fp ${params.n}_vs_findley_annotation_eval_${params.evalueTaxAnnot}.biomtsv \
+        --observation-header id,taxonomy \
+        --sc-separated taxonomy \
+        --output-as-json
+
+		$blastn \
+		-query $otu5 \
+		-db $unite \
+		-evalue $params.evalueTaxAnnot \
+		-num_threads $params.t \
+		-out ${params.n}_vs_unite_eval_${params.evalueTaxAnnot}.tsv \
+		-max_target_seqs $params.maxTargetSeqs \
+		-task megablast \
+		-outfmt "6 qseqid sseqid  pident qcovs evalue" \
+		-use_index true
+		
+        python $get_taxonomy \
+        -i ${params.n}_vs_unite_eval_${params.evalueTaxAnnot}.tsv \
+        -d $unite \
+        -u  $otu5  \
+        -o ${params.n}_vs_unite_annotation_eval_${params.evalueTaxAnnot}.tsv \
+        -ob ${params.n}_vs_unite_annotation_eval_${params.evalueTaxAnnot}.biomtsv \
+        -dtype unite
+        
+        $biom add-metadata \
+        -i $count3 \
+        -o ${params.n}_unite_eval_${params.evalueTaxAnnot}.biom \
+        --observation-metadata-fp ${params.n}_vs_unite_annotation_eval_${params.evalueTaxAnnot}.biomtsv \
+        --observation-header id,taxonomy \
+        --sc-separated taxonomy \
+        --output-as-json
+
+        $blastn \
+        -query $otu5 \
+        -db $underhill \
+        -evalue $params.evalueTaxAnnot \
+        -num_threads $params.t \
+        -out ${params.n}_vs_underhill_eval_${params.evalueTaxAnnot}.tsv \
+        -max_target_seqs $params.maxTargetSeqs \
+        -task megablast \
+        -outfmt "6 qseqid sseqid  pident qcovs evalue" \
+        -use_index true
+        
+        python $get_taxonomy \
+        -i ${params.n}_vs_underhill_eval_${params.evalueTaxAnnot}.tsv \
+        -d $underhill \
+        -u  $otu5 \
+        -t $underhill_taxonomy  \
+        -o ${params.n}_vs_underhill_annotation_eval_${params.evalueTaxAnnot}.tsv \
+        -ob ${params.n}_vs_underhill_annotation_eval_${params.evalueTaxAnnot}.biomtsv \
+        -dtype underhill
+        
+        $biom add-metadata \
+        -i $count3 \
+        -o ${params.n}_underhill_eval_${params.evalueTaxAnnot}.biom \
+        --observation-metadata-fp ${params.n}_vs_underhill_annotation_eval_${params.evalueTaxAnnot}.biomtsv \
+        --observation-header id,taxonomy \
+        --sc-separated taxonomy \
+        --output-as-json
+		"""
+	}
+}
 
 
 
